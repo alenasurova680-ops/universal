@@ -1,0 +1,153 @@
+-- Настройки главного окна меню
+local Window = Fluent:CreateWindow({
+    Title = "Universal Multi-Hack",
+    SubTitle = "by your name",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(530, 350),
+    Acrylic = true, -- Размытие заднего фона меню
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl -- Кнопка для скрытия/показа меню (Левый Ctrl)
+})
+
+-- Создаем вкладки слева
+local MainTab = Window:AddTab({ Title = "Main", Icon = "home" })
+local VisualsTab = Window:AddTab({ Title = "Visuals", Icon = "eye" })
+
+-- Глобальные переменные для функций
+getgenv().FlySpeed = 50
+getgenv().NoclipEnabled = false
+getgenv().EspEnabled = false
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- ==========================================
+-- ЛОГИКА ФУНКЦИЙ (ESP, Fly, Noclip)
+-- ==========================================
+
+-- 1. Логика ESP
+local function createESP(player)
+    if player == LocalPlayer then return end
+    local function applyHighlight(char)
+        if char:FindFirstChild("ESPHighlight") then return end
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "ESPHighlight"
+        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.FillTransparency = 0.5
+        highlight.Parent = char
+    end
+    if player.Character then applyHighlight(player.Character) end
+    player.CharacterAdded:Connect(applyHighlight)
+end
+
+task.spawn(function()
+    while task.wait(1) do
+        if getgenv().EspEnabled then
+            for _, p in ipairs(Players:GetPlayers()) do createESP(p) end
+        else
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p.Character and p.Character:FindFirstChild("ESPHighlight") then
+                    p.Character.ESPHighlight:Destroy()
+                end
+            end
+        end
+    end
+end)
+
+-- 2. Логика Noclip
+RunService.Stepped:Connect(function()
+    if getgenv().NoclipEnabled and LocalPlayer.Character then
+        for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+-- 3. Логика Fly
+local flying = false
+local bv = nil
+local function toggleFly(state)
+    flying = state
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    local humanoid = char:WaitForChild("Humanoid")
+    
+    if flying then
+        bv = Instance.new("BodyVelocity")
+        bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+        bv.Velocity = Vector3.zero
+        bv.Parent = hrp
+        humanoid.PlatformStand = true
+        
+        task.spawn(function()
+            while flying and char and hrp and humanoid.Parent do
+                bv.Velocity = humanoid.MoveDirection * getgenv().FlySpeed
+                if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.Space) then
+                    bv.Velocity = bv.Velocity + Vector3.new(0, getgenv().FlySpeed, 0)
+                end
+                task.wait()
+            end
+        end)
+    else
+        if bv then bv:Destroy() end
+        humanoid.PlatformStand = false
+    end
+end
+
+-- ==========================================
+-- ЗАПОЛНЕНИЕ ИНТЕРФЕЙСА ЭЛЕМЕНТАМИ
+-- ==========================================
+
+-- Вкладка "Main" (Полет и Ноуклип)
+MainTab:AddParagraph({ Title = "Movement Options", Content = "Управление перемещением вашего персонажа." })
+
+MainTab:AddToggle("FlyToggle", {
+    Title = "Enable Fly (Полет)",
+    Default = false,
+    Callback = function(Value)
+        toggleFly(Value)
+    end
+})
+
+MainTab:AddSlider("FlySpeedSlider", {
+    Title = "Fly Speed (Скорость)",
+    Description = "Регулировка скорости полета",
+    Default = 50,
+    Min = 10,
+    Max = 200,
+    Rounding = 0,
+    Callback = function(Value)
+        getgenv().FlySpeed = Value
+    end
+})
+
+MainTab:AddToggle("NoclipToggle", {
+    Title = "Enable Noclip (Сквозь стены)",
+    Default = false,
+    Callback = function(Value)
+        getgenv().NoclipEnabled = Value
+    end
+})
+
+-- Вкладка "Visuals" (ВХ / ESP)
+VisualsTab:AddParagraph({ Title = "Visual Options", Content = "ВХ и подсветка игроков." })
+
+VisualsTab:AddToggle("EspToggle", {
+    Title = "Enable ESP (ВХ)",
+    Default = false,
+    Callback = function(Value)
+        getgenv().EspEnabled = Value
+    end
+})
+
+-- Уведомление о том, что меню успешно запустилось
+Fluent:Notify({
+    Title = "Multi-Hack",
+    Content = "Скрипт успешно активирован! Нажмите Left Ctrl для скрытия.",
+    Duration = 5
+})
