@@ -5,7 +5,7 @@ local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.
 
 local Window = Fluent:CreateWindow({
     Title = "Kiirilmop Hub | Ultimate Universal",
-    SubTitle = "v3.5 Monster Morph & Config Edition",
+    SubTitle = "v4.0 Monster Morph & Fling Edition",
     TabWidth = 160,
     Size = UDim2.fromOffset(620, 500),
     Theme = "Dark"
@@ -340,64 +340,192 @@ Tabs.Movement:AddButton({
 local SpinbotEnabled = false
 local SpinSpeed = 50
 local ActiveAnimTrack = nil
+local SelectedFlingPlayer = nil
 
-Tabs.Troll:AddSection("Monster Morphs (Locust Creepypasta)")
+Tabs.Troll:AddSection("Monster Morphs (Locust)")
 
 Tabs.Troll:AddButton({
     Title = "Transform into Locust Monster",
-    Description = "Искажает пропорции тела и накладывает пугающую анимацию (видно всем)",
+    Description = "Морф обычного Локуста (работает на R6 и R15)",
     Callback = function()
         local char = LocalPlayer.Character
-        if not char or not char:FindFirstChild("Humanoid") then return end
+        if not char or not char:FindFirstChild("HumanoidRootPart") then return end
         
-        local humanoid = char.Humanoid
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
         
-        -- 1. Изменение пропорций тела (очень высокий, крайне тощий)
-        local bodyScales = {
-            {"BodyHeightScale", 2.6},
-            {"BodyWidthScale", 0.35},
-            {"BodyDepthScale", 0.35},
-            {"HeadScale", 0.25}
-        }
-        
-        for _, item in ipairs(bodyScales) do
-            local scale = humanoid:FindFirstChild(item[1])
-            if scale then
-                scale.Value = item[2]
-            end
-        end
-
-        -- 2. Удаление одежды и перекраска тела в тьму
         for _, item in ipairs(char:GetChildren()) do
-            if item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") then
+            if item:IsA("Accessory") or item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") or item:IsA("CharacterMesh") then
                 item:Destroy()
-            elseif item:IsA("BasePart") then
-                item.Color = Color3.fromRGB(10, 10, 10)
-                item.Material = Enum.Material.SmoothPlastic
             end
         end
 
-        -- 3. Запуск кастомной жуткой анимации
-        if ActiveAnimTrack then
-            ActiveAnimTrack:Stop()
+        for _, part in ipairs(char:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.Color = Color3.fromRGB(5, 5, 5)
+                part.Material = Enum.Material.SmoothPlastic
+            end
         end
-        
-        local anim = Instance.new("Animation")
-        anim.AnimationId = "rbxassetid://182436842" -- Хоррор-стойка/движения
-        ActiveAnimTrack = humanoid:LoadAnimation(anim)
-        ActiveAnimTrack.Priority = Enum.AnimationPriority.Action
-        ActiveAnimTrack:Play()
-        ActiveAnimTrack:AdjustSpeed(0.3)
+
+        for _, part in ipairs(char:GetChildren()) do
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                local mesh = part:FindFirstChildOfClass("SpecialMesh") or Instance.new("SpecialMesh", part)
+                mesh.MeshType = Enum.MeshType.Brick
+                
+                if part.Name == "Head" then
+                    mesh.Scale = Vector3.new(0.4, 0.4, 0.4)
+                else
+                    mesh.Scale = Vector3.new(0.35, 2.8, 0.35)
+                end
+            end
+        end
+
+        if humanoid then
+            if ActiveAnimTrack then ActiveAnimTrack:Stop() end
+            local anim = Instance.new("Animation")
+            anim.AnimationId = "rbxassetid://182436842"
+            ActiveAnimTrack = humanoid:LoadAnimation(anim)
+            ActiveAnimTrack.Priority = Enum.AnimationPriority.Action
+            ActiveAnimTrack:Play()
+            ActiveAnimTrack:AdjustSpeed(0.2)
+        end
         
         Fluent:Notify({
-            Title = "Monster Morph",
-            Content = "Вы успешно превратились в Локуста!",
+            Title = "Locust Morph",
+            Content = "Вы стали Локустом!",
             Duration = 5
         })
     end
 })
 
-Tabs.Troll:AddSection("Spin & Animations")
+Tabs.Troll:AddButton({
+    Title = "Transform into GIANT Locust",
+    Description = "Гигантская форма Локуста во всю карту",
+    Callback = function()
+        local char = LocalPlayer.Character
+        if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+        
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        local hrp = char.HumanoidRootPart
+        
+        for _, item in ipairs(char:GetChildren()) do
+            if item:IsA("Accessory") or item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") or item:IsA("CharacterMesh") then
+                item:Destroy()
+            end
+        end
+
+        for _, part in ipairs(char:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.Color = Color3.fromRGB(10, 10, 10)
+                part.Material = Enum.Material.SmoothPlastic
+            end
+        end
+
+        for _, part in ipairs(char:GetChildren()) do
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                local mesh = part:FindFirstChildOfClass("SpecialMesh") or Instance.new("SpecialMesh", part)
+                mesh.MeshType = Enum.MeshType.Brick
+                
+                if part.Name == "Head" then
+                    mesh.Scale = Vector3.new(2.5, 2.5, 2.5)
+                else
+                    mesh.Scale = Vector3.new(1.8, 12.0, 1.8)
+                end
+            end
+        end
+
+        hrp.Size = Vector3.new(6, 18, 6)
+
+        if humanoid then
+            if ActiveAnimTrack then ActiveAnimTrack:Stop() end
+            local anim = Instance.new("Animation")
+            anim.AnimationId = "rbxassetid://182436842"
+            ActiveAnimTrack = humanoid:LoadAnimation(anim)
+            ActiveAnimTrack.Priority = Enum.AnimationPriority.Action
+            ActiveAnimTrack:Play()
+            ActiveAnimTrack:AdjustSpeed(0.15)
+        end
+        
+        Fluent:Notify({
+            Title = "Giant Locust",
+            Content = "Вы стали гигантским Локустом!",
+            Duration = 5
+        })
+    end
+})
+
+Tabs.Troll:AddSection("Targeted Fling")
+
+local FlingDropdown = Tabs.Troll:AddDropdown("FlingPlayerSelect", {
+    Title = "Выбрать игрока для Fling",
+    Values = {},
+    Multi = false,
+    Default = nil,
+    Callback = function(Value)
+        SelectedFlingPlayer = Value
+    end
+})
+
+local function UpdateFlingDropdown()
+    local playerNames = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            table.insert(playerNames, player.Name)
+        end
+    end
+    FlingDropdown:SetValues(playerNames)
+end
+
+UpdateFlingDropdown()
+Players.PlayerAdded:Connect(UpdateFlingDropdown)
+Players.PlayerRemoving:Connect(UpdateFlingDropdown)
+
+Tabs.Troll:AddButton({
+    Title = "Fling Selected Player",
+    Description = "Запустить выбранного игрока в космос",
+    Callback = function()
+        if not SelectedFlingPlayer then
+            Fluent:Notify({ Title = "Ошибка", Content = "Сначала выберите игрока из списка!", Duration = 3 })
+            return
+        end
+
+        local targetPlayer = Players:FindFirstChild(SelectedFlingPlayer)
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") and hrp then
+            local targetHrp = targetPlayer.Character.HumanoidRootPart
+            
+            Fluent:Notify({ Title = "Fling", Content = "Флингаем " .. SelectedFlingPlayer .. "...", Duration = 3 })
+
+            local bav = Instance.new("BodyAngularVelocity")
+            bav.AngularVelocity = Vector3.new(0, 999999, 0)
+            bav.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+            bav.P = math.huge
+            bav.Parent = hrp
+
+            local originalCFrame = hrp.CFrame
+            local startTime = tick()
+
+            local connection
+            connection = RunService.Heartbeat:Connect(function()
+                if tick() - startTime > 1.5 or not targetHrp or not targetHrp.Parent then
+                    connection:Disconnect()
+                    bav:Destroy()
+                    task.wait(0.1)
+                    hrp.CFrame = originalCFrame
+                    return
+                end
+                
+                hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 0)
+                hrp.Velocity = Vector3.new(0, 1000, 0)
+            end)
+        else
+            Fluent:Notify({ Title = "Ошибка", Content = "Игрок не найден или мертв!", Duration = 3 })
+        end
+    end
+})
+
+Tabs.Troll:AddSection("Spinbot")
 
 local SpinToggle = Tabs.Troll:AddToggle("SpinToggle", {Title = "Spinbot", Default = false })
 SpinToggle:OnChanged(function(Value)
