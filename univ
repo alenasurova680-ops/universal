@@ -5,7 +5,7 @@ local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.
 
 local Window = Fluent:CreateWindow({
     Title = "Kiirilmop Hub | Ultimate Universal",
-    SubTitle = "v7.0 Big Scale & Spectate Fling",
+    SubTitle = "v8.0 Clean Big Character & Spectate Fling",
     TabWidth = 160,
     Size = UDim2.fromOffset(620, 500),
     Theme = "Dark"
@@ -210,30 +210,25 @@ local SpinbotEnabled = false
 local SpinSpeed = 50
 local SelectedFlingPlayer = nil
 
-Tabs.Troll:AddSection("Character Scaling")
+Tabs.Troll:AddSection("Big Character Scale")
 
--- Увеличение размера персонажа без изменения внешнего вида
-local ScaleValue = 1
+-- Ползунок чистого увеличения аватара
 Tabs.Troll:AddSlider("SizeSlider", {
-    Title = "Character Scale (Размер)",
+    Title = "Размер аватара (Scale)",
     Default = 1,
     Min = 1,
-    Max = 10,
+    Max = 15,
     Rounding = 1,
     Callback = function(Value)
-        ScaleValue = Value
         local char = LocalPlayer.Character
         if char and char:FindFirstChild("Humanoid") then
             local humanoid = char.Humanoid
-            local bodyScale = {"BodyHeightScale", "BodyWidthScale", "BodyDepthScale", "HeadScale"}
-            for _, scaleName in ipairs(bodyScale) do
-                local scaleObj = humanoid:FindFirstChild(scaleName)
-                if not scaleObj then
-                    scaleObj = Instance.new("NumberValue")
-                    scaleObj.Name = scaleName
-                    scaleObj.Parent = humanoid
-                end
-                scaleObj.Value = ScaleValue
+            local scales = {"BodyHeightScale", "BodyWidthScale", "BodyDepthScale", "HeadScale"}
+            
+            for _, scaleName in ipairs(scales) do
+                local scaleObj = humanoid:FindFirstChild(scaleName) or Instance.new("NumberValue", humanoid)
+                scaleObj.Name = scaleName
+                scaleObj.Value = Value
             end
         end
     end
@@ -278,14 +273,13 @@ Tabs.Troll:AddButton({
             local TargetHumanoid = Target.Character:FindFirstChildOfClass("Humanoid")
             local OldCFrame = HRP.CFrame
 
-            Fluent:Notify({ Title = "Fling", Content = "Запуск и наблюдение за " .. SelectedFlingPlayer, Duration = 3 })
+            Fluent:Notify({ Title = "Fling", Content = "Запуск и слежка за " .. SelectedFlingPlayer, Duration = 3 })
 
-            -- ПРИВЯЗКА КАМЕРЫ К ЖЕРТВЕ
+            -- Камера следит за жертвой
             if TargetHumanoid then
                 Camera.CameraSubject = TargetHumanoid
             end
 
-            -- Создаем BodyThrust для передачи кинетической энергии
             local Thrust = Instance.new("BodyThrust")
             Thrust.Parent = HRP
             Thrust.Force = Vector3.new(999999, 999999, 999999)
@@ -299,20 +293,18 @@ Tabs.Troll:AddButton({
                     Connection:Disconnect()
                     Thrust:Destroy()
                     
-                    -- Сброс скорости и возврат персонажа
                     HRP.Velocity = Vector3.zero
                     HRP.RotVelocity = Vector3.zero
                     task.wait(0.1)
                     HRP.CFrame = OldCFrame
                     
-                    -- ВОЗВРАТ КАМЕРЫ ОБРАТНО К СВОЕМУ ПЕРСОНАЖУ
+                    -- Возврат камеры к своему персонажу
                     if Char and Char:FindFirstChildOfClass("Humanoid") then
                         Camera.CameraSubject = Char:FindFirstChildOfClass("Humanoid")
                     end
                     return
                 end
 
-                -- Врезаемся в цель со случайным вращением
                 HRP.CFrame = TargetHRP.CFrame * CFrame.Angles(math.rad(math.random(0,360)), math.rad(math.random(0,360)), math.rad(math.random(0,360)))
                 HRP.Velocity = Vector3.new(9999, 9999, 9999)
             end)
