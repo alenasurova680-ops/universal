@@ -5,7 +5,7 @@ local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.
 
 local Window = Fluent:CreateWindow({
     Title = "Kiirilmop Hub | Ultimate Universal",
-    SubTitle = "v8.0 Clean Big Character & Spectate Fling",
+    SubTitle = "v9.0 Clean UI & Spectate Fling",
     TabWidth = 160,
     Size = UDim2.fromOffset(620, 500),
     Theme = "Dark"
@@ -210,29 +210,36 @@ local SpinbotEnabled = false
 local SpinSpeed = 50
 local SelectedFlingPlayer = nil
 
-Tabs.Troll:AddSection("Big Character Scale")
+Tabs.Troll:AddSection("Character Scaling")
 
--- Ползунок чистого увеличения аватара
+local function SetCharacterScale(scaleMultiplier)
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        local humanoid = char.Humanoid
+        local scales = {"BodyHeightScale", "BodyWidthScale", "BodyDepthScale", "HeadScale"}
+        
+        for _, scaleName in ipairs(scales) do
+            local scaleObj = humanoid:FindFirstChild(scaleName) or Instance.new("NumberValue", humanoid)
+            scaleObj.Name = scaleName
+            scaleObj.Value = scaleMultiplier
+        end
+    end
+end
+
 Tabs.Troll:AddSlider("SizeSlider", {
-    Title = "Размер аватара (Scale)",
+    Title = "Масштаб размера (Scale)",
     Default = 1,
     Min = 1,
     Max = 15,
     Rounding = 1,
     Callback = function(Value)
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("Humanoid") then
-            local humanoid = char.Humanoid
-            local scales = {"BodyHeightScale", "BodyWidthScale", "BodyDepthScale", "HeadScale"}
-            
-            for _, scaleName in ipairs(scales) do
-                local scaleObj = humanoid:FindFirstChild(scaleName) or Instance.new("NumberValue", humanoid)
-                scaleObj.Name = scaleName
-                scaleObj.Value = Value
-            end
-        end
+        SetCharacterScale(Value)
     end
 })
+
+Tabs.Troll:AddButton({ Title = "Быстрый X5 Размер", Callback = function() SetCharacterScale(5) end })
+Tabs.Troll:AddButton({ Title = "Быстрый X10 Размер", Callback = function() SetCharacterScale(10) end })
+Tabs.Troll:AddButton({ Title = "Сбросить Размер (1x)", Callback = function() SetCharacterScale(1) end })
 
 Tabs.Troll:AddSection("Bypass Fling & Spectate")
 
