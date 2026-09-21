@@ -5,7 +5,7 @@ local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.
 
 local Window = Fluent:CreateWindow({
     Title = "Kiirilmop Hub | Ultimate Universal",
-    SubTitle = "v4.0 Monster Morph & Fling Edition",
+    SubTitle = "v5.0 Monster Morph & Fix Fling",
     TabWidth = 160,
     Size = UDim2.fromOffset(620, 500),
     Theme = "Dark"
@@ -479,9 +479,10 @@ UpdateFlingDropdown()
 Players.PlayerAdded:Connect(UpdateFlingDropdown)
 Players.PlayerRemoving:Connect(UpdateFlingDropdown)
 
+-- РАБОЧИЙ МЕТОД FLING С ОБХОДОМ СЕТЕВОЙ ФИЗИКИ ROBLOX
 Tabs.Troll:AddButton({
     Title = "Fling Selected Player",
-    Description = "Запустить выбранного игрока в космос",
+    Description = "Ультра-мощный запуск игрока в космос",
     Callback = function()
         if not SelectedFlingPlayer then
             Fluent:Notify({ Title = "Ошибка", Content = "Сначала выберите игрока из списка!", Duration = 3 })
@@ -491,36 +492,49 @@ Tabs.Troll:AddButton({
         local targetPlayer = Players:FindFirstChild(SelectedFlingPlayer)
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local humanoid = char and char:FindFirstChildOfClass("Humanoid")
 
-        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") and hrp then
+        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") and hrp and humanoid then
             local targetHrp = targetPlayer.Character.HumanoidRootPart
+            local oldCFrame = hrp.CFrame
             
-            Fluent:Notify({ Title = "Fling", Content = "Флингаем " .. SelectedFlingPlayer .. "...", Duration = 3 })
+            Fluent:Notify({ Title = "Fling", Content = "Запуск " .. SelectedFlingPlayer .. "...", Duration = 2 })
 
-            local bav = Instance.new("BodyAngularVelocity")
-            bav.AngularVelocity = Vector3.new(0, 999999, 0)
-            bav.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-            bav.P = math.huge
-            bav.Parent = hrp
-
-            local originalCFrame = hrp.CFrame
-            local startTime = tick()
+            -- Включаем режим физической нестабильности для передачи импульса
+            workspace.FallenPartsDestroyHeight = 0/0
+            local Angle = 0
+            local Time = tick()
 
             local connection
             connection = RunService.Heartbeat:Connect(function()
-                if tick() - startTime > 1.5 or not targetHrp or not targetHrp.Parent then
+                if tick() - Time > 2 or not targetHrp or not targetHrp.Parent then
                     connection:Disconnect()
-                    bav:Destroy()
-                    task.wait(0.1)
-                    hrp.CFrame = originalCFrame
+                    
+                    -- Сброс скорости и возвращение в исходную позицию
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                    hrp.AssemblyAngularVelocity = Vector3.zero
+                    task.wait(0.05)
+                    hrp.CFrame = oldCFrame
                     return
                 end
+
+                -- Отключаем коллизии, чтобы не застревать в цели
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+
+                -- Оборачиваемся вокруг игрока и передаем экстремальную физику
+                Angle = Angle + 100
+                hrp.CFrame = targetHrp.CFrame * CFrame.Angles(0, math.rad(Angle), 0) * CFrame.new(0, 0, 0.2)
                 
-                hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 0)
-                hrp.Velocity = Vector3.new(0, 1000, 0)
+                -- Генерация бесконечной физической энергии столкновения
+                hrp.AssemblyLinearVelocity = Vector3.new(200000, 200000, 200000)
+                hrp.AssemblyAngularVelocity = Vector3.new(200000, 200000, 200000)
             end)
         else
-            Fluent:Notify({ Title = "Ошибка", Content = "Игрок не найден или мертв!", Duration = 3 })
+            Fluent:Notify({ Title = "Ошибка", Content = "Игрок не найден или слишком далеко!", Duration = 3 })
         end
     end
 })
