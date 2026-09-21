@@ -481,8 +481,8 @@ Players.PlayerRemoving:Connect(UpdateFlingDropdown)
 
 -- РАБОЧИЙ МЕТОД FLING С ОБХОДОМ СЕТЕВОЙ ФИЗИКИ ROBLOX
 Tabs.Troll:AddButton({
-    Title = "Fling Selected Player",
-    Description = "Ультра-мощный запуск игрока в космос",
+    Title = "Fling Selected Player (Fixed)",
+    Description = "Агрессивный флинг с принудительным контактом физики",
     Callback = function()
         if not SelectedFlingPlayer then
             Fluent:Notify({ Title = "Ошибка", Content = "Сначала выберите игрока из списка!", Duration = 3 })
@@ -500,106 +500,43 @@ Tabs.Troll:AddButton({
             
             Fluent:Notify({ Title = "Fling", Content = "Запуск " .. SelectedFlingPlayer .. "...", Duration = 2 })
 
-            -- Включаем режим физической нестабильности для передачи импульса
-            workspace.FallenPartsDestroyHeight = 0/0
-            local Angle = 0
-            local Time = tick()
+            -- Переключаем физику в режим нелинейного взаимодействия
+            humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+            
+            local startTime = tick()
+            local angle = 0
 
             local connection
             connection = RunService.Heartbeat:Connect(function()
-                if tick() - Time > 2 or not targetHrp or not targetHrp.Parent then
+                if tick() - startTime > 1.8 or not targetHrp or not targetHrp.Parent then
                     connection:Disconnect()
                     
-                    -- Сброс скорости и возвращение в исходную позицию
+                    -- Сброс импульса и телепорт обратно
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     hrp.AssemblyAngularVelocity = Vector3.zero
                     task.wait(0.05)
                     hrp.CFrame = oldCFrame
+                    humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
                     return
                 end
 
-                -- Отключаем коллизии, чтобы не застревать в цели
-                for _, part in ipairs(char:GetDescendants()) do
+                -- Включаем коллизию персонажа на время удара
+                for _, part in ipairs(char:GetChildren()) do
                     if part:IsA("BasePart") then
-                        part.CanCollide = false
+                        part.CanCollide = true
                     end
                 end
 
-                -- Оборачиваемся вокруг игрока и передаем экстремальную физику
-                Angle = Angle + 100
-                hrp.CFrame = targetHrp.CFrame * CFrame.Angles(0, math.rad(Angle), 0) * CFrame.new(0, 0, 0.2)
+                -- Жесткое перекрытие хитбокса и передача безумного вектора скорости
+                angle = angle + 180
+                hrp.CFrame = targetHrp.CFrame * CFrame.Angles(0, math.rad(angle), 0)
                 
-                -- Генерация бесконечной физической энергии столкновения
-                hrp.AssemblyLinearVelocity = Vector3.new(200000, 200000, 200000)
-                hrp.AssemblyAngularVelocity = Vector3.new(200000, 200000, 200000)
+                -- Генерация физического импульса
+                hrp.AssemblyLinearVelocity = Vector3.new(2000000, 2000000, 2000000)
+                hrp.AssemblyAngularVelocity = Vector3.new(2000000, 2000000, 2000000)
             end)
         else
-            Fluent:Notify({ Title = "Ошибка", Content = "Игрок не найден или слишком далеко!", Duration = 3 })
-        end
-    end
-})
-
-Tabs.Troll:AddSection("Spinbot")
-
-local SpinToggle = Tabs.Troll:AddToggle("SpinToggle", {Title = "Spinbot", Default = false })
-SpinToggle:OnChanged(function(Value)
-    SpinbotEnabled = Value
-end)
-
-Tabs.Troll:AddSlider("SpinSpeedSlider", {
-    Title = "Spin Speed",
-    Default = 50,
-    Min = 10,
-    Max = 300,
-    Rounding = 1,
-    Callback = function(Value)
-        SpinSpeed = Value
-    end
-})
-
-RunService.RenderStepped:Connect(function()
-    if SpinbotEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        LocalPlayer.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.Angles(0, math.rad(SpinSpeed), 0)
-    end
-end)
-
--- ==================== TELEPORTS ====================
-Tabs.Teleport:AddSection("Players Teleport")
-
-local SelectedPlayer = nil
-local PlayerDropdown = Tabs.Teleport:AddDropdown("PlayerDropdown", {
-    Title = "Select Player",
-    Values = {},
-    Multi = false,
-    Default = nil,
-})
-
-local function updatePlayerList()
-    local playerNames = {}
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            table.insert(playerNames, player.Name)
-        end
-    end
-    PlayerDropdown:SetValues(playerNames)
-end
-
-updatePlayerList()
-Players.PlayerAdded:Connect(updatePlayerList)
-Players.PlayerRemoving:Connect(updatePlayerList)
-
-PlayerDropdown:OnChanged(function(Value)
-    SelectedPlayer = Value
-end)
-
-Tabs.Teleport:AddButton({
-    Title = "TP to Selected Player",
-    Callback = function()
-        if SelectedPlayer then
-            local targetPlayer = Players:FindFirstChild(SelectedPlayer)
-            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                LocalPlayer.Character.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
-            end
+            Fluent:Notify({ Title = "Ошибка", Content = "Игрок не найден!", Duration = 3 })
         end
     end
 })
