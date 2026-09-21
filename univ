@@ -5,7 +5,7 @@ local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.
 
 local Window = Fluent:CreateWindow({
     Title = "Kiirilmop Hub | Ultimate Universal",
-    SubTitle = "v6.0 Fixed Fling & True Locust",
+    SubTitle = "v7.0 Big Scale & Spectate Fling",
     TabWidth = 160,
     Size = UDim2.fromOffset(620, 500),
     Theme = "Dark"
@@ -24,6 +24,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
 -- ==================== VISUALS ====================
 local ESPEnabled = false
@@ -194,13 +195,12 @@ Tabs.Movement:AddSlider("FlySpeedSlider", {Title = "Fly Speed", Default = 50, Mi
 
 RunService.RenderStepped:Connect(function()
     if FlyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local camera = workspace.CurrentCamera
         local moveDir = Vector3.zero
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camera.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camera.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
-        if bodyGyro then bodyGyro.cframe = camera.CFrame end
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
+        if bodyGyro then bodyGyro.cframe = Camera.CFrame end
         if bodyVelocity then bodyVelocity.velocity = moveDir * FlySpeed end
     end
 end)
@@ -210,55 +210,36 @@ local SpinbotEnabled = false
 local SpinSpeed = 50
 local SelectedFlingPlayer = nil
 
-Tabs.Troll:AddSection("Monster Morphs (Real Locust)")
+Tabs.Troll:AddSection("Character Scaling")
 
--- Функция трансформации Локуста с полной заменяемостью мешей под черную сущность
-local function MorphToLocust(isGiant)
-    local char = LocalPlayer.Character
-    if not char then return end
-    
-    for _, child in ipairs(char:GetChildren()) do
-        if child:IsA("Accessory") or child:IsA("Shirt") or child:IsA("Pants") or child:IsA("ShirtGraphic") or child:IsA("CharacterMesh") then
-            child:Destroy()
-        end
-    end
-
-    local mult = isGiant and 3.5 or 1.0
-
-    for _, part in ipairs(char:GetChildren()) do
-        if part:IsA("BasePart") then
-            part.Color = Color3.fromRGB(0, 0, 0)
-            part.Material = Enum.Material.SmoothPlastic
-            part.Transparency = 0
-            
-            -- Удаляем стандартные лица и текстуры
-            for _, sub in ipairs(part:GetChildren()) do
-                if sub:IsA("Decal") or sub:IsA("Texture") then sub:Destroy() end
-            end
-
-            if part.Name ~= "HumanoidRootPart" then
-                local mesh = part:FindFirstChildOfClass("SpecialMesh") or Instance.new("SpecialMesh", part)
-                mesh.MeshType = Enum.MeshType.FileMesh
-                mesh.MeshId = "rbxassetid://98555230" -- Меш иссушенного скелета/духа
-                
-                if part.Name == "Head" then
-                    mesh.Scale = Vector3.new(1.2 * mult, 1.2 * mult, 1.2 * mult)
-                elseif part.Name:find("Torso") then
-                    mesh.Scale = Vector3.new(0.6 * mult, 3.5 * mult, 0.4 * mult)
-                else -- Руки и ноги вытягиваем в длинные спицы
-                    mesh.Scale = Vector3.new(0.3 * mult, 5.0 * mult, 0.3 * mult)
+-- Увеличение размера персонажа без изменения внешнего вида
+local ScaleValue = 1
+Tabs.Troll:AddSlider("SizeSlider", {
+    Title = "Character Scale (Размер)",
+    Default = 1,
+    Min = 1,
+    Max = 10,
+    Rounding = 1,
+    Callback = function(Value)
+        ScaleValue = Value
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("Humanoid") then
+            local humanoid = char.Humanoid
+            local bodyScale = {"BodyHeightScale", "BodyWidthScale", "BodyDepthScale", "HeadScale"}
+            for _, scaleName in ipairs(bodyScale) do
+                local scaleObj = humanoid:FindFirstChild(scaleName)
+                if not scaleObj then
+                    scaleObj = Instance.new("NumberValue")
+                    scaleObj.Name = scaleName
+                    scaleObj.Parent = humanoid
                 end
+                scaleObj.Value = ScaleValue
             end
         end
     end
-    
-    Fluent:Notify({ Title = "Locust Morph", Content = isGiant and "Активирован Большой Локуст!" or "Активирован Локуст!", Duration = 3 })
-end
+})
 
-Tabs.Troll:AddButton({ Title = "Transform into Locust Monster", Description = "Тощий темный монстр", Callback = function() MorphToLocust(false) end })
-Tabs.Troll:AddButton({ Title = "Transform into GIANT Locust", Description = "Огромная жуткая тень", Callback = function() MorphToLocust(true) end })
-
-Tabs.Troll:AddSection("Bypass Fling (Working 2026)")
+Tabs.Troll:AddSection("Bypass Fling & Spectate")
 
 local FlingDropdown = Tabs.Troll:AddDropdown("FlingPlayerSelect", {
     Title = "Выбрать игрока для Fling",
@@ -279,10 +260,9 @@ UpdateFlingDropdown()
 Players.PlayerAdded:Connect(UpdateFlingDropdown)
 Players.PlayerRemoving:Connect(UpdateFlingDropdown)
 
--- РАБОЧИЙ МЕТОД: Skid BodyThrust Bypass Fling
 Tabs.Troll:AddButton({
     Title = "Fling Selected Player",
-    Description = "Обход физики Roblox через BodyThrust + Network Claim",
+    Description = "Флинг + привязка камеры к жертве",
     Callback = function()
         if not SelectedFlingPlayer then
             Fluent:Notify({ Title = "Ошибка", Content = "Выберите игрока!", Duration = 3 })
@@ -295,11 +275,17 @@ Tabs.Troll:AddButton({
 
         if Target and Target.Character and Target.Character:FindFirstChild("HumanoidRootPart") and HRP then
             local TargetHRP = Target.Character.HumanoidRootPart
+            local TargetHumanoid = Target.Character:FindFirstChildOfClass("Humanoid")
             local OldCFrame = HRP.CFrame
 
-            Fluent:Notify({ Title = "Fling", Content = "Флингаем " .. SelectedFlingPlayer .. "...", Duration = 3 })
+            Fluent:Notify({ Title = "Fling", Content = "Запуск и наблюдение за " .. SelectedFlingPlayer, Duration = 3 })
 
-            -- Создаем BodyThrust для взрыва физики
+            -- ПРИВЯЗКА КАМЕРЫ К ЖЕРТВЕ
+            if TargetHumanoid then
+                Camera.CameraSubject = TargetHumanoid
+            end
+
+            -- Создаем BodyThrust для передачи кинетической энергии
             local Thrust = Instance.new("BodyThrust")
             Thrust.Parent = HRP
             Thrust.Force = Vector3.new(999999, 999999, 999999)
@@ -309,17 +295,24 @@ Tabs.Troll:AddButton({
             local Connection
 
             Connection = RunService.Heartbeat:Connect(function()
-                if tick() - Time > 2.5 or not TargetHRP or not TargetHRP.Parent then
+                if tick() - Time > 3 or not TargetHRP or not TargetHRP.Parent then
                     Connection:Disconnect()
                     Thrust:Destroy()
+                    
+                    -- Сброс скорости и возврат персонажа
                     HRP.Velocity = Vector3.zero
                     HRP.RotVelocity = Vector3.zero
                     task.wait(0.1)
                     HRP.CFrame = OldCFrame
+                    
+                    -- ВОЗВРАТ КАМЕРЫ ОБРАТНО К СВОЕМУ ПЕРСОНАЖУ
+                    if Char and Char:FindFirstChildOfClass("Humanoid") then
+                        Camera.CameraSubject = Char:FindFirstChildOfClass("Humanoid")
+                    end
                     return
                 end
 
-                -- Телепортируемся прямо в центр хитбокса цели и крутимся
+                -- Врезаемся в цель со случайным вращением
                 HRP.CFrame = TargetHRP.CFrame * CFrame.Angles(math.rad(math.random(0,360)), math.rad(math.random(0,360)), math.rad(math.random(0,360)))
                 HRP.Velocity = Vector3.new(9999, 9999, 9999)
             end)
