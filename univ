@@ -1,11 +1,11 @@
--- Загрузка библиотеки Fluent UI, SaveManager и InterfaceManager
+-- Загрузка библиотеки Fluent UI
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
 local Window = Fluent:CreateWindow({
     Title = "Kiirilmop Hub | Ultimate Universal",
-    SubTitle = "v5.0 Monster Morph & Fix Fling",
+    SubTitle = "v6.0 Fixed Fling & True Locust",
     TabWidth = 160,
     Size = UDim2.fromOffset(620, 500),
     Theme = "Dark"
@@ -19,14 +19,13 @@ local Tabs = {
     Settings = Window:AddTab({ Title = "Settings & Configs", Icon = "settings" })
 }
 
--- Сервисы
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 local LocalPlayer = Players.LocalPlayer
 
--- ==================== VISUALS (ESP & LIGHTING) ====================
+-- ==================== VISUALS ====================
 local ESPEnabled = false
 local RainbowEnabled = false
 local CurrentColor = Color3.fromRGB(255, 0, 0)
@@ -40,7 +39,6 @@ local HitboxSize = 2
 
 local function createHighlight(player)
     if player == LocalPlayer then return end
-    
     local function apply(character)
         if not character then return end
         local highlight = character:FindFirstChild("PlayerHighlight") or Instance.new("Highlight")
@@ -54,29 +52,23 @@ local function createHighlight(player)
         highlight.Parent = character
         Highlights[player] = highlight
     end
-
     if player.Character then apply(player.Character) end
     player.CharacterAdded:Connect(apply)
 end
 
-for _, player in ipairs(Players:GetPlayers()) do
-    createHighlight(player)
-end
+for _, player in ipairs(Players:GetPlayers()) do createHighlight(player) end
 Players.PlayerAdded:Connect(createHighlight)
 
 RunService.RenderStepped:Connect(function()
     if RainbowEnabled then
-        local hue = (tick() % 5) / 5
-        CurrentColor = Color3.fromHSV(hue, 1, 1)
+        CurrentColor = Color3.fromHSV((tick() % 5) / 5, 1, 1)
     end
-    
     for _, highlight in pairs(Highlights) do
         if highlight and highlight.Parent then
             highlight.Enabled = ESPEnabled
             highlight.FillColor = CurrentColor
         end
     end
-
     if HitboxEnabled then
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
@@ -92,113 +84,41 @@ RunService.RenderStepped:Connect(function()
 end)
 
 Tabs.Visuals:AddSection("Player ESP")
-
-local ESPToggle = Tabs.Visuals:AddToggle("ESPToggle", {Title = "Player ESP", Default = false })
-ESPToggle:OnChanged(function(Value)
-    ESPEnabled = Value
-end)
-
-local ColorPicker = Tabs.Visuals:AddColorpicker("ColorPicker", {
-    Title = "ESP Color",
-    Default = Color3.fromRGB(255, 0, 0)
-})
-ColorPicker:OnChanged(function(Value)
-    if not RainbowEnabled then
-        CurrentColor = Value
-    end
-end)
-
-local RainbowToggle = Tabs.Visuals:AddToggle("RainbowToggle", {Title = "Rainbow ESP", Default = false })
-RainbowToggle:OnChanged(function(Value)
-    RainbowEnabled = Value
-end)
+Tabs.Visuals:AddToggle("ESPToggle", {Title = "Player ESP", Default = false}):OnChanged(function(Value) ESPEnabled = Value end)
+Tabs.Visuals:AddColorpicker("ColorPicker", {Title = "ESP Color", Default = Color3.fromRGB(255, 0, 0)}):OnChanged(function(Value) if not RainbowEnabled then CurrentColor = Value end end)
+Tabs.Visuals:AddToggle("RainbowToggle", {Title = "Rainbow ESP", Default = false}):OnChanged(function(Value) RainbowEnabled = Value end)
 
 Tabs.Visuals:AddSection("Hitbox & World")
-
-local HitboxToggle = Tabs.Visuals:AddToggle("HitboxToggle", {Title = "Expand Hitboxes", Default = false })
-HitboxToggle:OnChanged(function(Value)
+Tabs.Visuals:AddToggle("HitboxToggle", {Title = "Expand Hitboxes", Default = false}):OnChanged(function(Value)
     HitboxEnabled = Value
     if not Value then
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                local hrp = player.Character.HumanoidRootPart
-                hrp.Size = Vector3.new(2, 2, 1)
-                hrp.Transparency = 1
+                player.Character.HumanoidRootPart.Size = Vector3.new(2, 2, 1)
+                player.Character.HumanoidRootPart.Transparency = 1
             end
         end
     end
 end)
-
-Tabs.Visuals:AddSlider("HitboxSizeSlider", {
-    Title = "Hitbox Size",
-    Default = 5,
-    Min = 2,
-    Max = 25,
-    Rounding = 1,
-    Callback = function(Value)
-        HitboxSize = Value
-    end
-})
-
-local FullbrightToggle = Tabs.Visuals:AddToggle("FullbrightToggle", {Title = "Fullbright (No Darkness)", Default = false })
-FullbrightToggle:OnChanged(function(Value)
+Tabs.Visuals:AddSlider("HitboxSizeSlider", {Title = "Hitbox Size", Default = 5, Min = 2, Max = 25, Rounding = 1, Callback = function(Value) HitboxSize = Value end})
+Tabs.Visuals:AddToggle("FullbrightToggle", {Title = "Fullbright", Default = false}):OnChanged(function(Value)
     FullbrightEnabled = Value
-    if FullbrightEnabled then
-        Lighting.Brightness = 2
-        Lighting.ClockTime = 14
-        Lighting.GlobalShadows = false
-    else
-        Lighting.Brightness = DefaultBrightness
-        Lighting.ClockTime = DefaultClockTime
-        Lighting.GlobalShadows = DefaultGlobalShadows
-    end
+    Lighting.Brightness = FullbrightEnabled and 2 or DefaultBrightness
+    Lighting.ClockTime = FullbrightEnabled and 14 or DefaultClockTime
+    Lighting.GlobalShadows = not FullbrightEnabled and DefaultGlobalShadows
 end)
 
-Tabs.Visuals:AddSection("UI Settings")
-
-Tabs.Visuals:AddKeybind("ToggleKeybind", {
-    Title = "Toggle Menu Key",
-    Mode = "Toggle",
-    Default = "RightShift",
-    Callback = function()
-        Window:Minimize()
-    end
-})
+Tabs.Visuals:AddKeybind("ToggleKeybind", {Title = "Toggle Menu Key", Mode = "Toggle", Default = "RightShift", Callback = function() Window:Minimize() end})
 
 -- ==================== MOVEMENT ====================
-local WalkSpeedValue = 16
-local JumpPowerValue = 50
-local NoclipEnabled = false
-local BhopEnabled = false
-local CurrentBhopSpeed = 16
-local MaxBhopSpeed = 120
-local FlyEnabled = false
-local InfJumpEnabled = false
+local WalkSpeedValue, JumpPowerValue = 16, 50
+local NoclipEnabled, BhopEnabled, InfJumpEnabled, FlyEnabled = false, false, false, false
+local CurrentBhopSpeed, MaxBhopSpeed = 16, 120
 local FlySpeed = 50
 
 Tabs.Movement:AddSection("Speed & Jump")
-
-Tabs.Movement:AddSlider("SpeedSlider", {
-    Title = "WalkSpeed",
-    Default = 16,
-    Min = 16,
-    Max = 250,
-    Rounding = 1,
-    Callback = function(Value)
-        WalkSpeedValue = Value
-    end
-})
-
-Tabs.Movement:AddSlider("JumpSlider", {
-    Title = "JumpPower",
-    Default = 50,
-    Min = 50,
-    Max = 300,
-    Rounding = 1,
-    Callback = function(Value)
-        JumpPowerValue = Value
-    end
-})
+Tabs.Movement:AddSlider("SpeedSlider", {Title = "WalkSpeed", Default = 16, Min = 16, Max = 250, Rounding = 1, Callback = function(V) WalkSpeedValue = V end})
+Tabs.Movement:AddSlider("JumpSlider", {Title = "JumpPower", Default = 50, Min = 50, Max = 300, Rounding = 1, Callback = function(V) JumpPowerValue = V end})
 
 RunService.Stepped:Connect(function()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") and not BhopEnabled then
@@ -208,11 +128,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
-local InfJumpToggle = Tabs.Movement:AddToggle("InfJumpToggle", {Title = "Infinite Jump", Default = false })
-InfJumpToggle:OnChanged(function(Value)
-    InfJumpEnabled = Value
-end)
-
+Tabs.Movement:AddToggle("InfJumpToggle", {Title = "Infinite Jump", Default = false}):OnChanged(function(V) InfJumpEnabled = V end)
 UserInputService.JumpRequest:Connect(function()
     if InfJumpEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
@@ -220,28 +136,19 @@ UserInputService.JumpRequest:Connect(function()
 end)
 
 Tabs.Movement:AddSection("Flight & Physics")
-
-local NoclipToggle = Tabs.Movement:AddToggle("NoclipToggle", {Title = "Noclip", Default = false })
-NoclipToggle:OnChanged(function(Value)
-    NoclipEnabled = Value
-end)
+Tabs.Movement:AddToggle("NoclipToggle", {Title = "Noclip", Default = false}):OnChanged(function(V) NoclipEnabled = V end)
 
 RunService.Stepped:Connect(function()
     if NoclipEnabled and LocalPlayer.Character then
         for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
+            if part:IsA("BasePart") then part.CanCollide = false end
         end
     end
 end)
 
-local BhopToggle = Tabs.Movement:AddToggle("BhopToggle", {Title = "Bunnyhop (Accel)", Default = false })
-BhopToggle:OnChanged(function(Value)
-    BhopEnabled = Value
-    if not Value then
-        CurrentBhopSpeed = WalkSpeedValue
-    end
+Tabs.Movement:AddToggle("BhopToggle", {Title = "Bunnyhop", Default = false}):OnChanged(function(V)
+    BhopEnabled = V
+    if not V then CurrentBhopSpeed = WalkSpeedValue end
 end)
 
 RunService.RenderStepped:Connect(function()
@@ -259,281 +166,162 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-local FlyToggle = Tabs.Movement:AddToggle("FlyToggle", {Title = "Fly", Default = false })
 local bodyGyro, bodyVelocity
-
-FlyToggle:OnChanged(function(Value)
-    FlyEnabled = Value
+Tabs.Movement:AddToggle("FlyToggle", {Title = "Fly", Default = false}):OnChanged(function(V)
+    FlyEnabled = V
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    
     local hrp = char.HumanoidRootPart
     if FlyEnabled then
-        bodyGyro = Instance.new("BodyGyro")
+        bodyGyro = Instance.new("BodyGyro", hrp)
         bodyGyro.P = 9e4
         bodyGyro.maxTorque = Vector3.new(9e9, 9e9, 9e9)
         bodyGyro.cframe = hrp.CFrame
-        bodyGyro.Parent = hrp
 
-        bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity = Instance.new("BodyVelocity", hrp)
         bodyVelocity.velocity = Vector3.zero
         bodyVelocity.maxForce = Vector3.new(9e9, 9e9, 9e9)
-        bodyVelocity.Parent = hrp
 
         char.Humanoid.PlatformStand = true
     else
         if bodyGyro then bodyGyro:Destroy() end
         if bodyVelocity then bodyVelocity:Destroy() end
-        if char:FindFirstChild("Humanoid") then
-            char.Humanoid.PlatformStand = false
-        end
+        if char:FindFirstChild("Humanoid") then char.Humanoid.PlatformStand = false end
     end
 end)
 
-Tabs.Movement:AddSlider("FlySpeedSlider", {
-    Title = "Fly Speed",
-    Default = 50,
-    Min = 10,
-    Max = 200,
-    Rounding = 1,
-    Callback = function(Value)
-        FlySpeed = Value
-    end
-})
+Tabs.Movement:AddSlider("FlySpeedSlider", {Title = "Fly Speed", Default = 50, Min = 10, Max = 200, Rounding = 1, Callback = function(V) FlySpeed = V end})
 
 RunService.RenderStepped:Connect(function()
     if FlyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local hrp = LocalPlayer.Character.HumanoidRootPart
         local camera = workspace.CurrentCamera
         local moveDir = Vector3.zero
-
         if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camera.CFrame.LookVector end
         if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
         if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camera.CFrame.RightVector end
         if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.E) then moveDir = moveDir + Vector3.new(0, 1, 0) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Q) then moveDir = moveDir - Vector3.new(0, 1, 0) end
-
         if bodyGyro then bodyGyro.cframe = camera.CFrame end
         if bodyVelocity then bodyVelocity.velocity = moveDir * FlySpeed end
     end
 end)
 
-Tabs.Movement:AddButton({
-    Title = "Give TP Tool",
-    Description = "Клик мышкой для ТП",
-    Callback = function()
-        local tool = Instance.new("Tool")
-        tool.Name = "Teleport Tool"
-        tool.RequiresHandle = false
-        tool.Activated:Connect(function()
-            local mouse = LocalPlayer:GetMouse()
-            if mouse.Target and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0))
-            end
-        end)
-        tool.Parent = LocalPlayer.Backpack
-    end
-})
-
 -- ==================== TROLL & FUN ====================
 local SpinbotEnabled = false
 local SpinSpeed = 50
-local ActiveAnimTrack = nil
 local SelectedFlingPlayer = nil
 
-Tabs.Troll:AddSection("Monster Morphs (Locust)")
+Tabs.Troll:AddSection("Monster Morphs (Real Locust)")
 
-Tabs.Troll:AddButton({
-    Title = "Transform into Locust Monster",
-    Description = "Морф обычного Локуста (работает на R6 и R15)",
-    Callback = function()
-        local char = LocalPlayer.Character
-        if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-        
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        
-        for _, item in ipairs(char:GetChildren()) do
-            if item:IsA("Accessory") or item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") or item:IsA("CharacterMesh") then
-                item:Destroy()
-            end
+-- Функция трансформации Локуста с полной заменяемостью мешей под черную сущность
+local function MorphToLocust(isGiant)
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    for _, child in ipairs(char:GetChildren()) do
+        if child:IsA("Accessory") or child:IsA("Shirt") or child:IsA("Pants") or child:IsA("ShirtGraphic") or child:IsA("CharacterMesh") then
+            child:Destroy()
         end
+    end
 
-        for _, part in ipairs(char:GetChildren()) do
-            if part:IsA("BasePart") then
-                part.Color = Color3.fromRGB(5, 5, 5)
-                part.Material = Enum.Material.SmoothPlastic
+    local mult = isGiant and 3.5 or 1.0
+
+    for _, part in ipairs(char:GetChildren()) do
+        if part:IsA("BasePart") then
+            part.Color = Color3.fromRGB(0, 0, 0)
+            part.Material = Enum.Material.SmoothPlastic
+            part.Transparency = 0
+            
+            -- Удаляем стандартные лица и текстуры
+            for _, sub in ipairs(part:GetChildren()) do
+                if sub:IsA("Decal") or sub:IsA("Texture") then sub:Destroy() end
             end
-        end
 
-        for _, part in ipairs(char:GetChildren()) do
-            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+            if part.Name ~= "HumanoidRootPart" then
                 local mesh = part:FindFirstChildOfClass("SpecialMesh") or Instance.new("SpecialMesh", part)
-                mesh.MeshType = Enum.MeshType.Brick
+                mesh.MeshType = Enum.MeshType.FileMesh
+                mesh.MeshId = "rbxassetid://98555230" -- Меш иссушенного скелета/духа
                 
                 if part.Name == "Head" then
-                    mesh.Scale = Vector3.new(0.4, 0.4, 0.4)
-                else
-                    mesh.Scale = Vector3.new(0.35, 2.8, 0.35)
+                    mesh.Scale = Vector3.new(1.2 * mult, 1.2 * mult, 1.2 * mult)
+                elseif part.Name:find("Torso") then
+                    mesh.Scale = Vector3.new(0.6 * mult, 3.5 * mult, 0.4 * mult)
+                else -- Руки и ноги вытягиваем в длинные спицы
+                    mesh.Scale = Vector3.new(0.3 * mult, 5.0 * mult, 0.3 * mult)
                 end
             end
         end
-
-        if humanoid then
-            if ActiveAnimTrack then ActiveAnimTrack:Stop() end
-            local anim = Instance.new("Animation")
-            anim.AnimationId = "rbxassetid://182436842"
-            ActiveAnimTrack = humanoid:LoadAnimation(anim)
-            ActiveAnimTrack.Priority = Enum.AnimationPriority.Action
-            ActiveAnimTrack:Play()
-            ActiveAnimTrack:AdjustSpeed(0.2)
-        end
-        
-        Fluent:Notify({
-            Title = "Locust Morph",
-            Content = "Вы стали Локустом!",
-            Duration = 5
-        })
     end
-})
+    
+    Fluent:Notify({ Title = "Locust Morph", Content = isGiant and "Активирован Большой Локуст!" or "Активирован Локуст!", Duration = 3 })
+end
 
-Tabs.Troll:AddButton({
-    Title = "Transform into GIANT Locust",
-    Description = "Гигантская форма Локуста во всю карту",
-    Callback = function()
-        local char = LocalPlayer.Character
-        if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-        
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        local hrp = char.HumanoidRootPart
-        
-        for _, item in ipairs(char:GetChildren()) do
-            if item:IsA("Accessory") or item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") or item:IsA("CharacterMesh") then
-                item:Destroy()
-            end
-        end
+Tabs.Troll:AddButton({ Title = "Transform into Locust Monster", Description = "Тощий темный монстр", Callback = function() MorphToLocust(false) end })
+Tabs.Troll:AddButton({ Title = "Transform into GIANT Locust", Description = "Огромная жуткая тень", Callback = function() MorphToLocust(true) end })
 
-        for _, part in ipairs(char:GetChildren()) do
-            if part:IsA("BasePart") then
-                part.Color = Color3.fromRGB(10, 10, 10)
-                part.Material = Enum.Material.SmoothPlastic
-            end
-        end
-
-        for _, part in ipairs(char:GetChildren()) do
-            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                local mesh = part:FindFirstChildOfClass("SpecialMesh") or Instance.new("SpecialMesh", part)
-                mesh.MeshType = Enum.MeshType.Brick
-                
-                if part.Name == "Head" then
-                    mesh.Scale = Vector3.new(2.5, 2.5, 2.5)
-                else
-                    mesh.Scale = Vector3.new(1.8, 12.0, 1.8)
-                end
-            end
-        end
-
-        hrp.Size = Vector3.new(6, 18, 6)
-
-        if humanoid then
-            if ActiveAnimTrack then ActiveAnimTrack:Stop() end
-            local anim = Instance.new("Animation")
-            anim.AnimationId = "rbxassetid://182436842"
-            ActiveAnimTrack = humanoid:LoadAnimation(anim)
-            ActiveAnimTrack.Priority = Enum.AnimationPriority.Action
-            ActiveAnimTrack:Play()
-            ActiveAnimTrack:AdjustSpeed(0.15)
-        end
-        
-        Fluent:Notify({
-            Title = "Giant Locust",
-            Content = "Вы стали гигантским Локустом!",
-            Duration = 5
-        })
-    end
-})
-
-Tabs.Troll:AddSection("Targeted Fling")
+Tabs.Troll:AddSection("Bypass Fling (Working 2026)")
 
 local FlingDropdown = Tabs.Troll:AddDropdown("FlingPlayerSelect", {
     Title = "Выбрать игрока для Fling",
     Values = {},
     Multi = false,
     Default = nil,
-    Callback = function(Value)
-        SelectedFlingPlayer = Value
-    end
+    Callback = function(V) SelectedFlingPlayer = V end
 })
 
 local function UpdateFlingDropdown()
-    local playerNames = {}
+    local p = {}
     for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            table.insert(playerNames, player.Name)
-        end
+        if player ~= LocalPlayer then table.insert(p, player.Name) end
     end
-    FlingDropdown:SetValues(playerNames)
+    FlingDropdown:SetValues(p)
 end
-
 UpdateFlingDropdown()
 Players.PlayerAdded:Connect(UpdateFlingDropdown)
 Players.PlayerRemoving:Connect(UpdateFlingDropdown)
 
--- РАБОЧИЙ МЕТОД FLING С ОБХОДОМ СЕТЕВОЙ ФИЗИКИ ROBLOX
+-- РАБОЧИЙ МЕТОД: Skid BodyThrust Bypass Fling
 Tabs.Troll:AddButton({
-    Title = "Fling Selected Player (Fixed)",
-    Description = "Агрессивный флинг с принудительным контактом физики",
+    Title = "Fling Selected Player",
+    Description = "Обход физики Roblox через BodyThrust + Network Claim",
     Callback = function()
         if not SelectedFlingPlayer then
-            Fluent:Notify({ Title = "Ошибка", Content = "Сначала выберите игрока из списка!", Duration = 3 })
+            Fluent:Notify({ Title = "Ошибка", Content = "Выберите игрока!", Duration = 3 })
             return
         end
 
-        local targetPlayer = Players:FindFirstChild(SelectedFlingPlayer)
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+        local Target = Players:FindFirstChild(SelectedFlingPlayer)
+        local Char = LocalPlayer.Character
+        local HRP = Char and Char:FindFirstChild("HumanoidRootPart")
 
-        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") and hrp and humanoid then
-            local targetHrp = targetPlayer.Character.HumanoidRootPart
-            local oldCFrame = hrp.CFrame
-            
-            Fluent:Notify({ Title = "Fling", Content = "Запуск " .. SelectedFlingPlayer .. "...", Duration = 2 })
+        if Target and Target.Character and Target.Character:FindFirstChild("HumanoidRootPart") and HRP then
+            local TargetHRP = Target.Character.HumanoidRootPart
+            local OldCFrame = HRP.CFrame
 
-            -- Переключаем физику в режим нелинейного взаимодействия
-            humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-            
-            local startTime = tick()
-            local angle = 0
+            Fluent:Notify({ Title = "Fling", Content = "Флингаем " .. SelectedFlingPlayer .. "...", Duration = 3 })
 
-            local connection
-            connection = RunService.Heartbeat:Connect(function()
-                if tick() - startTime > 1.8 or not targetHrp or not targetHrp.Parent then
-                    connection:Disconnect()
-                    
-                    -- Сброс импульса и телепорт обратно
-                    hrp.AssemblyLinearVelocity = Vector3.zero
-                    hrp.AssemblyAngularVelocity = Vector3.zero
-                    task.wait(0.05)
-                    hrp.CFrame = oldCFrame
-                    humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+            -- Создаем BodyThrust для взрыва физики
+            local Thrust = Instance.new("BodyThrust")
+            Thrust.Parent = HRP
+            Thrust.Force = Vector3.new(999999, 999999, 999999)
+            Thrust.Location = Vector3.new(9999, 9999, 9999)
+
+            local Time = tick()
+            local Connection
+
+            Connection = RunService.Heartbeat:Connect(function()
+                if tick() - Time > 2.5 or not TargetHRP or not TargetHRP.Parent then
+                    Connection:Disconnect()
+                    Thrust:Destroy()
+                    HRP.Velocity = Vector3.zero
+                    HRP.RotVelocity = Vector3.zero
+                    task.wait(0.1)
+                    HRP.CFrame = OldCFrame
                     return
                 end
 
-                -- Включаем коллизию персонажа на время удара
-                for _, part in ipairs(char:GetChildren()) do
-                    if part:IsA("BasePart") then
-                        part.CanCollide = true
-                    end
-                end
-
-                -- Жесткое перекрытие хитбокса и передача безумного вектора скорости
-                angle = angle + 180
-                hrp.CFrame = targetHrp.CFrame * CFrame.Angles(0, math.rad(angle), 0)
-                
-                -- Генерация физического импульса
-                hrp.AssemblyLinearVelocity = Vector3.new(2000000, 2000000, 2000000)
-                hrp.AssemblyAngularVelocity = Vector3.new(2000000, 2000000, 2000000)
+                -- Телепортируемся прямо в центр хитбокса цели и крутимся
+                HRP.CFrame = TargetHRP.CFrame * CFrame.Angles(math.rad(math.random(0,360)), math.rad(math.random(0,360)), math.rad(math.random(0,360)))
+                HRP.Velocity = Vector3.new(9999, 9999, 9999)
             end)
         else
             Fluent:Notify({ Title = "Ошибка", Content = "Игрок не найден!", Duration = 3 })
@@ -541,16 +329,52 @@ Tabs.Troll:AddButton({
     end
 })
 
+Tabs.Troll:AddSection("Spinbot")
+Tabs.Troll:AddToggle("SpinToggle", {Title = "Spinbot", Default = false}):OnChanged(function(V) SpinbotEnabled = V end)
+Tabs.Troll:AddSlider("SpinSpeedSlider", {Title = "Spin Speed", Default = 50, Min = 10, Max = 300, Rounding = 1, Callback = function(V) SpinSpeed = V end})
+
+RunService.RenderStepped:Connect(function()
+    if SpinbotEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.Angles(0, math.rad(SpinSpeed), 0)
+    end
+end)
+
+-- ==================== TELEPORTS ====================
+Tabs.Teleport:AddSection("Players Teleport")
+local SelectedPlayer = nil
+local PlayerDropdown = Tabs.Teleport:AddDropdown("PlayerDropdown", { Title = "Select Player", Values = {}, Multi = false, Default = nil })
+
+local function updatePlayerList()
+    local p = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then table.insert(p, player.Name) end
+    end
+    PlayerDropdown:SetValues(p)
+end
+updatePlayerList()
+Players.PlayerAdded:Connect(updatePlayerList)
+Players.PlayerRemoving:Connect(updatePlayerList)
+
+PlayerDropdown:OnChanged(function(V) SelectedPlayer = V end)
+Tabs.Teleport:AddButton({
+    Title = "TP to Selected Player",
+    Callback = function()
+        if SelectedPlayer then
+            local targetPlayer = Players:FindFirstChild(SelectedPlayer)
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+            end
+        end
+    end
+})
+
 -- ==================== CONFIGS & SETTINGS ====================
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
-
 SaveManager:IgnoreThemeSettings()
 SaveManager:SetIgnoreIndexes({})
-
 InterfaceManager:SetFolder("KiirilmopHub")
 SaveManager:SetFolder("KiirilmopHub/configs")
-
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
 
