@@ -1,64 +1,233 @@
--- Настройки главного окна меню
+-- Загрузка библиотеки Fluent UI, SaveManager и InterfaceManager
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
 local Window = Fluent:CreateWindow({
-    Title = "Universal Multi-Hack",
-    SubTitle = "by your name",
+    Title = "Kiirilmop Hub | Ultimate Universal",
+    SubTitle = "v3.5 Monster Morph & Config Edition",
     TabWidth = 160,
-    Size = UDim2.fromOffset(530, 350),
-    Acrylic = true, -- Размытие заднего фона меню
-    Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl -- Кнопка для скрытия/показа меню (Левый Ctrl)
+    Size = UDim2.fromOffset(620, 500),
+    Theme = "Dark"
 })
 
--- Создаем вкладки слева
-local MainTab = Window:AddTab({ Title = "Main", Icon = "home" })
-local VisualsTab = Window:AddTab({ Title = "Visuals", Icon = "eye" })
+local Tabs = {
+    Visuals = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
+    Movement = Window:AddTab({ Title = "Movement", Icon = "move" }),
+    Troll = Window:AddTab({ Title = "Troll & Fun", Icon = "zap" }),
+    Teleport = Window:AddTab({ Title = "Teleports", Icon = "map-pin" }),
+    Settings = Window:AddTab({ Title = "Settings & Configs", Icon = "settings" })
+}
 
--- Глобальные переменные для функций
-getgenv().FlySpeed = 50
-getgenv().NoclipEnabled = false
-getgenv().EspEnabled = false
-
+-- Сервисы
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
 local LocalPlayer = Players.LocalPlayer
 
--- ==========================================
--- ЛОГИКА ФУНКЦИЙ (ESP, Fly, Noclip)
--- ==========================================
+-- ==================== VISUALS (ESP & LIGHTING) ====================
+local ESPEnabled = false
+local RainbowEnabled = false
+local CurrentColor = Color3.fromRGB(255, 0, 0)
+local Highlights = {}
+local FullbrightEnabled = false
+local DefaultBrightness = Lighting.Brightness
+local DefaultClockTime = Lighting.ClockTime
+local DefaultGlobalShadows = Lighting.GlobalShadows
+local HitboxEnabled = false
+local HitboxSize = 2
 
--- 1. Логика ESP
-local function createESP(player)
+local function createHighlight(player)
     if player == LocalPlayer then return end
-    local function applyHighlight(char)
-        if char:FindFirstChild("ESPHighlight") then return end
-        local highlight = Instance.new("Highlight")
-        highlight.Name = "ESPHighlight"
-        highlight.FillColor = Color3.fromRGB(255, 0, 0)
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    
+    local function apply(character)
+        if not character then return end
+        local highlight = character:FindFirstChild("PlayerHighlight") or Instance.new("Highlight")
+        highlight.Name = "PlayerHighlight"
+        highlight.Adornee = character
         highlight.FillTransparency = 0.5
-        highlight.Parent = char
+        highlight.OutlineTransparency = 0
+        highlight.FillColor = CurrentColor
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.Enabled = ESPEnabled
+        highlight.Parent = character
+        Highlights[player] = highlight
     end
-    if player.Character then applyHighlight(player.Character) end
-    player.CharacterAdded:Connect(applyHighlight)
+
+    if player.Character then apply(player.Character) end
+    player.CharacterAdded:Connect(apply)
 end
 
-task.spawn(function()
-    while task.wait(1) do
-        if getgenv().EspEnabled then
-            for _, p in ipairs(Players:GetPlayers()) do createESP(p) end
-        else
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p.Character and p.Character:FindFirstChild("ESPHighlight") then
-                    p.Character.ESPHighlight:Destroy()
-                end
+for _, player in ipairs(Players:GetPlayers()) do
+    createHighlight(player)
+end
+Players.PlayerAdded:Connect(createHighlight)
+
+RunService.RenderStepped:Connect(function()
+    if RainbowEnabled then
+        local hue = (tick() % 5) / 5
+        CurrentColor = Color3.fromHSV(hue, 1, 1)
+    end
+    
+    for _, highlight in pairs(Highlights) do
+        if highlight and highlight.Parent then
+            highlight.Enabled = ESPEnabled
+            highlight.FillColor = CurrentColor
+        end
+    end
+
+    if HitboxEnabled then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = player.Character.HumanoidRootPart
+                hrp.Size = Vector3.new(HitboxSize, HitboxSize, HitboxSize)
+                hrp.Transparency = 0.7
+                hrp.BrickColor = BrickColor.new("Really red")
+                hrp.Material = Enum.Material.Neon
+                hrp.CanCollide = false
             end
         end
     end
 end)
 
--- 2. Логика Noclip
+Tabs.Visuals:AddSection("Player ESP")
+
+local ESPToggle = Tabs.Visuals:AddToggle("ESPToggle", {Title = "Player ESP", Default = false })
+ESPToggle:OnChanged(function(Value)
+    ESPEnabled = Value
+end)
+
+local ColorPicker = Tabs.Visuals:AddColorpicker("ColorPicker", {
+    Title = "ESP Color",
+    Default = Color3.fromRGB(255, 0, 0)
+})
+ColorPicker:OnChanged(function(Value)
+    if not RainbowEnabled then
+        CurrentColor = Value
+    end
+end)
+
+local RainbowToggle = Tabs.Visuals:AddToggle("RainbowToggle", {Title = "Rainbow ESP", Default = false })
+RainbowToggle:OnChanged(function(Value)
+    RainbowEnabled = Value
+end)
+
+Tabs.Visuals:AddSection("Hitbox & World")
+
+local HitboxToggle = Tabs.Visuals:AddToggle("HitboxToggle", {Title = "Expand Hitboxes", Default = false })
+HitboxToggle:OnChanged(function(Value)
+    HitboxEnabled = Value
+    if not Value then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = player.Character.HumanoidRootPart
+                hrp.Size = Vector3.new(2, 2, 1)
+                hrp.Transparency = 1
+            end
+        end
+    end
+end)
+
+Tabs.Visuals:AddSlider("HitboxSizeSlider", {
+    Title = "Hitbox Size",
+    Default = 5,
+    Min = 2,
+    Max = 25,
+    Rounding = 1,
+    Callback = function(Value)
+        HitboxSize = Value
+    end
+})
+
+local FullbrightToggle = Tabs.Visuals:AddToggle("FullbrightToggle", {Title = "Fullbright (No Darkness)", Default = false })
+FullbrightToggle:OnChanged(function(Value)
+    FullbrightEnabled = Value
+    if FullbrightEnabled then
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 14
+        Lighting.GlobalShadows = false
+    else
+        Lighting.Brightness = DefaultBrightness
+        Lighting.ClockTime = DefaultClockTime
+        Lighting.GlobalShadows = DefaultGlobalShadows
+    end
+end)
+
+Tabs.Visuals:AddSection("UI Settings")
+
+Tabs.Visuals:AddKeybind("ToggleKeybind", {
+    Title = "Toggle Menu Key",
+    Mode = "Toggle",
+    Default = "RightShift",
+    Callback = function()
+        Window:Minimize()
+    end
+})
+
+-- ==================== MOVEMENT ====================
+local WalkSpeedValue = 16
+local JumpPowerValue = 50
+local NoclipEnabled = false
+local BhopEnabled = false
+local CurrentBhopSpeed = 16
+local MaxBhopSpeed = 120
+local FlyEnabled = false
+local InfJumpEnabled = false
+local FlySpeed = 50
+
+Tabs.Movement:AddSection("Speed & Jump")
+
+Tabs.Movement:AddSlider("SpeedSlider", {
+    Title = "WalkSpeed",
+    Default = 16,
+    Min = 16,
+    Max = 250,
+    Rounding = 1,
+    Callback = function(Value)
+        WalkSpeedValue = Value
+    end
+})
+
+Tabs.Movement:AddSlider("JumpSlider", {
+    Title = "JumpPower",
+    Default = 50,
+    Min = 50,
+    Max = 300,
+    Rounding = 1,
+    Callback = function(Value)
+        JumpPowerValue = Value
+    end
+})
+
 RunService.Stepped:Connect(function()
-    if getgenv().NoclipEnabled and LocalPlayer.Character then
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") and not BhopEnabled then
+        LocalPlayer.Character.Humanoid.WalkSpeed = WalkSpeedValue
+        LocalPlayer.Character.Humanoid.UseJumpPower = true
+        LocalPlayer.Character.Humanoid.JumpPower = JumpPowerValue
+    end
+end)
+
+local InfJumpToggle = Tabs.Movement:AddToggle("InfJumpToggle", {Title = "Infinite Jump", Default = false })
+InfJumpToggle:OnChanged(function(Value)
+    InfJumpEnabled = Value
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if InfJumpEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+Tabs.Movement:AddSection("Flight & Physics")
+
+local NoclipToggle = Tabs.Movement:AddToggle("NoclipToggle", {Title = "Noclip", Default = false })
+NoclipToggle:OnChanged(function(Value)
+    NoclipEnabled = Value
+end)
+
+RunService.Stepped:Connect(function()
+    if NoclipEnabled and LocalPlayer.Character then
         for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
             if part:IsA("BasePart") then
                 part.CanCollide = false
@@ -67,87 +236,244 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- 3. Логика Fly
-local flying = false
-local bv = nil
-local function toggleFly(state)
-    flying = state
-    local char = LocalPlayer.Character
-    if not char then return end
-    local hrp = char:WaitForChild("HumanoidRootPart")
-    local humanoid = char:WaitForChild("Humanoid")
-    
-    if flying then
-        bv = Instance.new("BodyVelocity")
-        bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-        bv.Velocity = Vector3.zero
-        bv.Parent = hrp
-        humanoid.PlatformStand = true
-        
-        task.spawn(function()
-            while flying and char and hrp and humanoid.Parent do
-                bv.Velocity = humanoid.MoveDirection * getgenv().FlySpeed
-                if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.Space) then
-                    bv.Velocity = bv.Velocity + Vector3.new(0, getgenv().FlySpeed, 0)
-                end
-                task.wait()
+local BhopToggle = Tabs.Movement:AddToggle("BhopToggle", {Title = "Bunnyhop (Accel)", Default = false })
+BhopToggle:OnChanged(function(Value)
+    BhopEnabled = Value
+    if not Value then
+        CurrentBhopSpeed = WalkSpeedValue
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if BhopEnabled and UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            local humanoid = LocalPlayer.Character.Humanoid
+            if humanoid.FloorMaterial ~= Enum.Material.Air then
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                CurrentBhopSpeed = math.min(CurrentBhopSpeed + 2.5, MaxBhopSpeed)
+                humanoid.WalkSpeed = CurrentBhopSpeed
             end
-        end)
+        end
     else
-        if bv then bv:Destroy() end
-        humanoid.PlatformStand = false
+        CurrentBhopSpeed = WalkSpeedValue
     end
-end
+end)
 
--- ==========================================
--- ЗАПОЛНЕНИЕ ИНТЕРФЕЙСА ЭЛЕМЕНТАМИ
--- ==========================================
+local FlyToggle = Tabs.Movement:AddToggle("FlyToggle", {Title = "Fly", Default = false })
+local bodyGyro, bodyVelocity
 
--- Вкладка "Main" (Полет и Ноуклип)
-MainTab:AddParagraph({ Title = "Movement Options", Content = "Управление перемещением вашего персонажа." })
+FlyToggle:OnChanged(function(Value)
+    FlyEnabled = Value
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    local hrp = char.HumanoidRootPart
+    if FlyEnabled then
+        bodyGyro = Instance.new("BodyGyro")
+        bodyGyro.P = 9e4
+        bodyGyro.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+        bodyGyro.cframe = hrp.CFrame
+        bodyGyro.Parent = hrp
 
-MainTab:AddToggle("FlyToggle", {
-    Title = "Enable Fly (Полет)",
-    Default = false,
-    Callback = function(Value)
-        toggleFly(Value)
+        bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.velocity = Vector3.zero
+        bodyVelocity.maxForce = Vector3.new(9e9, 9e9, 9e9)
+        bodyVelocity.Parent = hrp
+
+        char.Humanoid.PlatformStand = true
+    else
+        if bodyGyro then bodyGyro:Destroy() end
+        if bodyVelocity then bodyVelocity:Destroy() end
+        if char:FindFirstChild("Humanoid") then
+            char.Humanoid.PlatformStand = false
+        end
     end
-})
+end)
 
-MainTab:AddSlider("FlySpeedSlider", {
-    Title = "Fly Speed (Скорость)",
-    Description = "Регулировка скорости полета",
+Tabs.Movement:AddSlider("FlySpeedSlider", {
+    Title = "Fly Speed",
     Default = 50,
     Min = 10,
     Max = 200,
-    Rounding = 0,
+    Rounding = 1,
     Callback = function(Value)
-        getgenv().FlySpeed = Value
+        FlySpeed = Value
     end
 })
 
-MainTab:AddToggle("NoclipToggle", {
-    Title = "Enable Noclip (Сквозь стены)",
-    Default = false,
-    Callback = function(Value)
-        getgenv().NoclipEnabled = Value
+RunService.RenderStepped:Connect(function()
+    if FlyEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = LocalPlayer.Character.HumanoidRootPart
+        local camera = workspace.CurrentCamera
+        local moveDir = Vector3.zero
+
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camera.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.E) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Q) then moveDir = moveDir - Vector3.new(0, 1, 0) end
+
+        if bodyGyro then bodyGyro.cframe = camera.CFrame end
+        if bodyVelocity then bodyVelocity.velocity = moveDir * FlySpeed end
+    end
+end)
+
+Tabs.Movement:AddButton({
+    Title = "Give TP Tool",
+    Description = "Клик мышкой для ТП",
+    Callback = function()
+        local tool = Instance.new("Tool")
+        tool.Name = "Teleport Tool"
+        tool.RequiresHandle = false
+        tool.Activated:Connect(function()
+            local mouse = LocalPlayer:GetMouse()
+            if mouse.Target and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0))
+            end
+        end)
+        tool.Parent = LocalPlayer.Backpack
     end
 })
 
--- Вкладка "Visuals" (ВХ / ESP)
-VisualsTab:AddParagraph({ Title = "Visual Options", Content = "ВХ и подсветка игроков." })
+-- ==================== TROLL & FUN ====================
+local SpinbotEnabled = false
+local SpinSpeed = 50
+local ActiveAnimTrack = nil
 
-VisualsTab:AddToggle("EspToggle", {
-    Title = "Enable ESP (ВХ)",
-    Default = false,
-    Callback = function(Value)
-        getgenv().EspEnabled = Value
+Tabs.Troll:AddSection("Monster Morphs (Locust Creepypasta)")
+
+Tabs.Troll:AddButton({
+    Title = "Transform into Locust Monster",
+    Description = "Искажает пропорции тела и накладывает пугающую анимацию (видно всем)",
+    Callback = function()
+        local char = LocalPlayer.Character
+        if not char or not char:FindFirstChild("Humanoid") then return end
+        
+        local humanoid = char.Humanoid
+        
+        -- 1. Изменение пропорций тела (очень высокий, крайне тощий)
+        local bodyScales = {
+            {"BodyHeightScale", 2.6},
+            {"BodyWidthScale", 0.35},
+            {"BodyDepthScale", 0.35},
+            {"HeadScale", 0.25}
+        }
+        
+        for _, item in ipairs(bodyScales) do
+            local scale = humanoid:FindFirstChild(item[1])
+            if scale then
+                scale.Value = item[2]
+            end
+        end
+
+        -- 2. Удаление одежды и перекраска тела в тьму
+        for _, item in ipairs(char:GetChildren()) do
+            if item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") then
+                item:Destroy()
+            elseif item:IsA("BasePart") then
+                item.Color = Color3.fromRGB(10, 10, 10)
+                item.Material = Enum.Material.SmoothPlastic
+            end
+        end
+
+        -- 3. Запуск кастомной жуткой анимации
+        if ActiveAnimTrack then
+            ActiveAnimTrack:Stop()
+        end
+        
+        local anim = Instance.new("Animation")
+        anim.AnimationId = "rbxassetid://182436842" -- Хоррор-стойка/движения
+        ActiveAnimTrack = humanoid:LoadAnimation(anim)
+        ActiveAnimTrack.Priority = Enum.AnimationPriority.Action
+        ActiveAnimTrack:Play()
+        ActiveAnimTrack:AdjustSpeed(0.3)
+        
+        Fluent:Notify({
+            Title = "Monster Morph",
+            Content = "Вы успешно превратились в Локуста!",
+            Duration = 5
+        })
     end
 })
 
--- Уведомление о том, что меню успешно запустилось
-Fluent:Notify({
-    Title = "Multi-Hack",
-    Content = "Скрипт успешно активирован! Нажмите Left Ctrl для скрытия.",
-    Duration = 5
+Tabs.Troll:AddSection("Spin & Animations")
+
+local SpinToggle = Tabs.Troll:AddToggle("SpinToggle", {Title = "Spinbot", Default = false })
+SpinToggle:OnChanged(function(Value)
+    SpinbotEnabled = Value
+end)
+
+Tabs.Troll:AddSlider("SpinSpeedSlider", {
+    Title = "Spin Speed",
+    Default = 50,
+    Min = 10,
+    Max = 300,
+    Rounding = 1,
+    Callback = function(Value)
+        SpinSpeed = Value
+    end
 })
+
+RunService.RenderStepped:Connect(function()
+    if SpinbotEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.Angles(0, math.rad(SpinSpeed), 0)
+    end
+end)
+
+-- ==================== TELEPORTS ====================
+Tabs.Teleport:AddSection("Players Teleport")
+
+local SelectedPlayer = nil
+local PlayerDropdown = Tabs.Teleport:AddDropdown("PlayerDropdown", {
+    Title = "Select Player",
+    Values = {},
+    Multi = false,
+    Default = nil,
+})
+
+local function updatePlayerList()
+    local playerNames = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            table.insert(playerNames, player.Name)
+        end
+    end
+    PlayerDropdown:SetValues(playerNames)
+end
+
+updatePlayerList()
+Players.PlayerAdded:Connect(updatePlayerList)
+Players.PlayerRemoving:Connect(updatePlayerList)
+
+PlayerDropdown:OnChanged(function(Value)
+    SelectedPlayer = Value
+end)
+
+Tabs.Teleport:AddButton({
+    Title = "TP to Selected Player",
+    Callback = function()
+        if SelectedPlayer then
+            local targetPlayer = Players:FindFirstChild(SelectedPlayer)
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+            end
+        end
+    end
+})
+
+-- ==================== CONFIGS & SETTINGS ====================
+SaveManager:SetLibrary(Fluent)
+InterfaceManager:SetLibrary(Fluent)
+
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({})
+
+InterfaceManager:SetFolder("KiirilmopHub")
+SaveManager:SetFolder("KiirilmopHub/configs")
+
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
+
+Window:SelectTab(1)
+SaveManager:LoadAutoloadConfig()
